@@ -1,114 +1,93 @@
+#!/usr/bin/env python3
 import os
-import shutil
+from pathlib import Path
+import re
+from datetime import date
 
-folder_name = input("\nEnter Your Project Category: ")
-path = os.path.join("./", folder_name)
-if not os.path.exists(path):
-    os.mkdir(path)
-os.chdir(folder_name)
 
-path = "../wikifiles/"
-if not os.path.exists(path):
-    os.mkdir(path)
+# ---------- Utilities ----------
+def slugify(s: str) -> str:
+    s = s.strip().lower()
+    s = re.sub(r"[^\w\s-]", "", s)
+    s = re.sub(r"[\s_-]+", "-", s).strip("-")
+    return s or "untitled"
 
-path = os.path.join("../wikifiles/", folder_name)
-if not os.path.exists(path):
-    os.mkdir(path)
 
-project_name = input("\n\nEnter Your Project Name: ")
-path = os.path.join("./", project_name)
-os.mkdir(path)
-os.chdir(project_name)
-with open("project_name.txt", "w") as file:
-    file.write(project_name)
+def read_multiline(prompt: str) -> str:
+    print(f"\n{prompt}\nEnter text. Finish with a single '.' on a line:")
+    lines = []
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if line.strip() == ".":
+            break
+        lines.append(line)
+    return "\n".join(lines).strip()
 
-open("abstract.txt", "x")
-print("\n\nFill out the Abstract of the Project in the abstract.txt(Follow .md Syntax) that is created in the project folder:")
-while 1:
-    input("Press Enter if your done:")
-    if os.path.getsize('abstract.txt') == 0:
-        print("\nText file has not been filled yet")
-    else:
-        break
 
-with open("info.txt", "w") as file:
-    umbrella_project = input("\n\nEnter the Umbrella Project Name: ")
-    file.write("###"+" Umbrella Project\n")
-    file.write("* "+umbrella_project+"\n")
+def write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        f.write(content)
 
-    emphasis = input("\nEnter the Emphasis of the Project: ")
-    file.write("###"+" Emphasis:\n")
-    file.write("* "+emphasis+"\n")
 
-    background = input("\nEnter Expected Background: ")
-    file.write("###"+" Expected Background\n")
-    file.write("* "+background+"\n")
+# ---------- Anchors & inputs ----------
+# Anchor everything to the directory containing this script
+SCRIPT_DIR = Path(__file__).resolve().parent
 
-    poc = input("\nEnter the Primary Point of Contact of this Project[name(emailID)]: ")
-    file.write("###"+" Primary Point of Contact\n")
-    file.write("* "+poc+"\n")
+category = input("\nEnter your project category: ").strip()
+project = input("Enter your project name: ").strip()
 
-    supervisor = input("\nEnter the Supervisor of this Project[name(emailID)]: ")
-    file.write("###"+" Supervisor\n")
-    file.write("* "+supervisor)
+category_slug = slugify(category)
+project_slug = slugify(project)
 
-open("references.txt", "x")
-print("\n\nFill out the References of the Project in the references.txt that is created in the project folder(Add \"* \" before each citation(.md syntax)):")
-while 1:
-    input("Press Enter if your done:")
-    if os.path.getsize('references.txt') == 0:
-        print("\nText file has not been filled yet")
-    else:
-        break
+# Working dir to keep raw section txts (optional, nice for later edits)
+work_dir = SCRIPT_DIR / category_slug / project_slug
+# Wiki output directory
+wiki_dir = SCRIPT_DIR / "wikifiles" / category_slug
+# Final markdown path
+md_path = wiki_dir / f"{project_slug}.md"
 
-open("est_timeline.txt", "x")
-print("\n\nEnter Estimated Timeline for this Project in the est_timeline.txt that is created in the project folder(Add \"* \" before each line(.md syntax)):")
-while 1:
-    input("Press Enter if your done:")
-    if os.path.getsize('est_timeline.txt') == 0:
-        print("\nText file has not been filled yet")
-    else:
-        break
+# ---------- Collect content ----------
+# If you prefer to paste from an editor later, you can just hit '.' to skip.
+abstract = read_multiline("Abstract")
+objectives = read_multiline("Objectives")
+methodology = read_multiline("Methodology")
+est_timeline = read_multiline("Estimated Timelines")
+deliverables = read_multiline("Possible Deliverables")
 
-open("deliverables.txt", "x")
-print("\n\nFill out the Possible Deliverables of the Project in the deliverables.txt that is created in the project folder(Add \"* \" before each line(.md syntax)):")
-while 1:
-    input("Press Enter if your done:")
-    if os.path.getsize('deliverables.txt') == 0:
-        print("\nText file has not been filled yet")
-    else:
-        break
+# Save the raw section files for future editing (no brittle size checks)
+write_text(work_dir / "abstract.txt", abstract)
+write_text(work_dir / "objectives.txt", objectives)
+write_text(work_dir / "methodology.txt", methodology)
+write_text(work_dir / "est_timeline.txt", est_timeline)
+write_text(work_dir / "deliverables.txt", deliverables)
 
-with open(project_name+".md", "w") as file:
-    file.write("## "+"Proposal Abstract\n")
-    f = open("abstract.txt", "r")
-    abstract = f.read()
-    file.write(abstract)
-    f.close()
 
-    file.write("\n## "+"About the Project\n")
-    f = open("info.txt", "r")
-    info = f.read()
-    file.write(info)
-    f.close()
+# ---------- Render Markdown ----------
+def sec(title: str, body: str) -> str:
+    body = body.strip()
+    return f"## {title}\n\n{body}\n" if body else ""
 
-    file.write("\n## "+"References and External Resources\n")
-    f = open("references.txt", "r")
-    references = f.read()
-    file.write(references)
-    f.close()
 
-    file.write("\n## "+"Estimated Timelines\n")
-    f = open("est_timeline.txt", "r")
-    est_timeline = f.read()
-    file.write(est_timeline)
-    f.close()
+markdown = (
+    f"# {project}\n\n"
+    f"*Category:* {category}\n\n"
+    f"*Created:* {date.today().isoformat()}\n\n"
+    + sec("Abstract", abstract)
+    + sec("Objectives", objectives)
+    + sec("Methodology", methodology)
+    + sec("Estimated Timelines", est_timeline)
+    + sec("Possible Deliverables", deliverables)
+).strip() + "\n"
 
-    file.write("\n## "+"Possible Deliverables\n")
-    f = open("deliverables.txt", "r")
-    deliverables = f.read()
-    file.write(deliverables)
-    f.close()
+# ---------- Write output (atomically via tmp) ----------
+wiki_dir.mkdir(parents=True, exist_ok=True)
+tmp_path = md_path.with_suffix(".md.tmp")
+write_text(tmp_path, markdown)
+tmp_path.replace(md_path)
 
-os.replace("./" + project_name + ".md", "../../wikifiles/" + folder_name + "/"+ project_name + ".md")
-shutil.rmtree("../../" + folder_name)
+print(f"\n✅ Saved:\n  {md_path}")
+print(f"🗂️  Source notes:\n  {work_dir}")
