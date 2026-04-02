@@ -34,3 +34,6 @@ git commit -m "Modify/Delete a project"
 git push origin main
 ```
 **Step 3:** As soon as you push the changes to the main branch a CI/CD workflow is launched and a Wiki page is updated. 
+
+## an alternative view of the projects
+[spreadsheet](https://docs.google.com/spreadsheets/d/1d4c_sshx-y5A2EoqRQLqLJ0-kZC9ED6D/edit?gid=1260517153#gid=1260517153)
